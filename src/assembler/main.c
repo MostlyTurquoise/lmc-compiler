@@ -5,13 +5,58 @@
 #define true 1
 #define false 0
 
-const char *FILENAME = "test.txt";
-
 typedef enum
 {
     MODE_TEXT,
     MODE_BINARY,
 } Mode;
+
+// http://www.cse.yorku.ca/~oz/hash.html
+// djb2 by dan bernstein
+unsigned long hash(unsigned char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+
+    while (c = *str++)
+    {
+
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
+
+    return hash;
+}
+
+void writeOutChars(char c1, char c2, FILE *out, int *counter)
+{
+    fputc(c1, out);
+    fputc(c2 >> 8, out);
+    *counter++;
+}
+
+void writeOutShort(short val, FILE *out, int *counter)
+{
+    fputc(val, out);
+    fputc(val >> 8, out);
+    *counter++;
+}
+
+int lookupVariable(long *variableTable, int variableCount, long variable)
+{
+    for (int i = 0; i < variableCount; i += 2)
+    {
+        long varHash = variableTable[i];
+        long varLoc = variableTable[i + 1];
+        if (varHash == variable)
+        {
+            return varLoc;
+        }
+    }
+    return -1;
+}
+
+const int MAX_LINE_LENGTH = 100;
+const int MAX_VARIABLES = 100;
 
 int main(int argc, char **argv)
 {
@@ -60,12 +105,19 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    char line[100];
+    char line[MAX_LINE_LENGTH];
+    int counter = 0;
+    long variables[MAX_VARIABLES * 2];
+    int next_variable = 0;
+
+    printf("Variable scan:\n");
+
+    // Find all variable locations
     while (fgets(line, sizeof(line), in))
     {
-        char first[100];
-        char second[100];
-        char third[100];
+        char first[MAX_LINE_LENGTH];
+        char second[MAX_LINE_LENGTH];
+        char third[MAX_LINE_LENGTH];
 
         int number = sscanf(line, "%s %s %s\n", first, second, third);
 
@@ -85,27 +137,88 @@ int main(int argc, char **argv)
             if (*second)
             {
                 char *end;
-                short val = strtol(second, &end, 10);
-                fputc(val, out);
+                unsigned short val = strtol(second, &end, 10);
+                writeOutShort(val, out, &counter);
             }
             else
             {
-                fputc(0, out);
+                writeOutShort(0, out, &counter);
             }
         }
         else if (strcmp(second, "DAT") == 0)
         {
             printf("Dat with label\n");
+            variables[next_variable++] = hash(first);
+            variables[next_variable++] = (long)counter;
             if (*third)
             {
                 char *end;
-                short val = strtol(third, &end, 10);
-                fputc(val, out);
+                unsigned short val = strtol(third, &end, 10);
+                printf("%i", val);
+                writeOutShort(val, out, &counter);
             }
             else
             {
-                fputc(0, out);
+                writeOutShort(0, out, &counter);
             }
+        }
+    }
+
+    fseek(in, 0, SEEK_SET);
+
+    printf("Output scan:\n");
+
+    while (fgets(line, sizeof(line), in))
+    {
+        char first[MAX_LINE_LENGTH];
+        char second[MAX_LINE_LENGTH];
+        char third[MAX_LINE_LENGTH];
+
+        int number = sscanf(line, "%s %s %s\n", first, second, third);
+
+        if (number < 3)
+        {
+            *third = 0; // set null byte at first index of string
+        }
+        if (number < 2)
+        {
+            *second = 0; // set null byte at first index of string
+        }
+
+        printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
+
+        if (strcmp(first, "DAT") == 0)
+        {
+            if (*second)
+            {
+                char *end;
+                unsigned short val = strtol(second, &end, 10);
+                writeOutShort(val, out, &counter);
+            }
+            else
+            {
+                writeOutShort(0, out, &counter);
+            }
+        }
+        else if (strcmp(second, "DAT") == 0)
+        {
+            if (*third)
+            {
+                char *end;
+                unsigned short val = strtol(third, &end, 10);
+                printf("%i", val);
+                writeOutShort(val, out, &counter);
+            }
+            else
+            {
+                writeOutShort(0, out, &counter);
+            }
+        }
+        else if (strcmp(first, "INP") == 0 || strcmp(second, "INP"))
+        {
+        }
+        else if (strcmp(first, "STA") == 0 || stcmp(second, "STA"))
+        {
         }
 
         // fputs(line, out);
@@ -132,6 +245,8 @@ int main(int argc, char **argv)
     //     printf("Line %i: %s\n", amountRead, buffer);
     //     currentlyAt += amountRead;
     // }
+
+    printf("\n\n");
 
     return 0;
 }
