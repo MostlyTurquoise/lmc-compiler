@@ -8,7 +8,7 @@
 typedef enum
 {
     MODE_TEXT,
-    MODE_BINARY,
+    MODE_BINARY
 } Mode;
 
 // http://www.cse.yorku.ca/~oz/hash.html
@@ -27,32 +27,49 @@ unsigned long hash(unsigned char *str)
     return hash;
 }
 
-void writeOutChars(char c1, char c2, FILE *out, int *counter)
+void write_out_chars(char c1, char c2, FILE *out, int *counter)
 {
     fputc(c1, out);
     fputc(c2 >> 8, out);
     *counter++;
 }
 
-void writeOutShort(short val, FILE *out, int *counter)
+void write_out_short(short val, FILE *out, int *counter)
 {
     fputc(val, out);
     fputc(val >> 8, out);
     *counter++;
 }
 
-int lookupVariable(long *variableTable, int variableCount, long variable)
+int lookup_label(long *labelTable, int label_count, long labelHash)
 {
-    for (int i = 0; i < variableCount; i += 2)
+    printf("Searching for %ld\n", labelHash);
+    for (int i = 0; i < label_count; i += 2)
     {
-        long varHash = variableTable[i];
-        long varLoc = variableTable[i + 1];
-        if (varHash == variable)
+        long currentHash = labelTable[i];
+        long currentLoc = labelTable[i + 1];
+        printf("Got %ld at %ld\n", currentHash, currentLoc);
+        if (currentHash == labelHash)
         {
-            return varLoc;
+            return currentLoc;
         }
     }
     return -1;
+}
+
+char *ALL_INSTRUCTIONS[] = {"DAT", "LDA", "STA", "ADD", "SUB", "INP", "OUT", "HLT", "BRA", "BRZ", "BRP", 0};
+
+int is_instruction(char *word)
+{
+    int current = 0;
+    while (ALL_INSTRUCTIONS[current] != 0)
+    {
+        if (strcmp(word, ALL_INSTRUCTIONS[current++]) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 const int MAX_LINE_LENGTH = 100;
@@ -60,12 +77,12 @@ const int MAX_VARIABLES = 100;
 
 int main(int argc, char **argv)
 {
-    Mode assemblyMode = MODE_BINARY;
-    char *filename = 0;
-    char *outputFile = "out.lmb";
+    Mode assembly_mode = MODE_BINARY;
+    char *input_filename = 0;
+    char *output_filename = "out.lmb";
     if (argc > 1)
     {
-        filename = argv[1];
+        input_filename = argv[1];
     }
     else
     {
@@ -78,11 +95,11 @@ int main(int argc, char **argv)
         char *flag = argv[i];
         if (strcmp(flag, "-t"))
         {
-            assemblyMode = MODE_TEXT;
+            assembly_mode = MODE_TEXT;
         }
         else if (strcmp(flag, "-o") == 0)
         {
-            outputFile = argv[++i];
+            output_filename = argv[++i];
         }
         else
         {
@@ -92,25 +109,26 @@ int main(int argc, char **argv)
     }
 
     FILE *in;
-    if (!(in = fopen(filename, "r")))
+    if (!(in = fopen(input_filename, "r")))
     {
         printf("Error opening input file!\n");
         exit(EXIT_FAILURE);
     }
 
     FILE *out;
-    if (!(out = fopen(outputFile, "wb")))
+    if (!(out = fopen(output_filename, "wb")))
     {
         printf("Error opening output file\n");
         exit(EXIT_FAILURE);
     }
 
+    long labels[MAX_VARIABLES * 2];
+    int label_count = 0;
+
     char line[MAX_LINE_LENGTH];
     int counter = 0;
-    long variables[MAX_VARIABLES * 2];
-    int next_variable = 0;
 
-    printf("Variable scan:\n");
+    printf("Label scan:\n");
 
     // Find all variable locations
     while (fgets(line, sizeof(line), in))
@@ -130,41 +148,20 @@ int main(int argc, char **argv)
             *second = 0; // set null byte at first index of string
         }
 
-        printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
+        // printf("Label Pass: Number: %i, First: %s, Second: %s\n", number, first, second);
 
-        if (strcmp(first, "DAT") == 0)
+        if (is_instruction(second))
         {
-            if (*second)
-            {
-                char *end;
-                unsigned short val = strtol(second, &end, 10);
-                writeOutShort(val, out, &counter);
-            }
-            else
-            {
-                writeOutShort(0, out, &counter);
-            }
+            printf("Found label %s at %i (instruction %s %s)\n", first, counter, second, third);
+            labels[label_count++] = hash(first);
+            labels[label_count++] = (long)counter;
         }
-        else if (strcmp(second, "DAT") == 0)
-        {
-            printf("Dat with label\n");
-            variables[next_variable++] = hash(first);
-            variables[next_variable++] = (long)counter;
-            if (*third)
-            {
-                char *end;
-                unsigned short val = strtol(third, &end, 10);
-                printf("%i", val);
-                writeOutShort(val, out, &counter);
-            }
-            else
-            {
-                writeOutShort(0, out, &counter);
-            }
-        }
+
+        counter++;
     }
 
     fseek(in, 0, SEEK_SET);
+    counter = 0;
 
     printf("Output scan:\n");
 
@@ -187,41 +184,51 @@ int main(int argc, char **argv)
 
         printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
 
-        if (strcmp(first, "DAT") == 0)
+        char *opcode = first;
+        char *operand = second;
+        if (is_instruction(second))
         {
-            if (*second)
+            opcode = second;
+            operand = third;
+        }
+
+        if (strcmp(opcode, "DAT") == 0)
+        {
+            if (*operand)
             {
                 char *end;
                 unsigned short val = strtol(second, &end, 10);
-                writeOutShort(val, out, &counter);
+                write_out_short(val, out, &counter);
             }
             else
             {
-                writeOutShort(0, out, &counter);
+                write_out_short(0, out, &counter);
             }
         }
-        else if (strcmp(second, "DAT") == 0)
+        else if (strcmp(opcode, "INP") == 0)
         {
-            if (*third)
+        }
+        else if (strcmp(opcode, "STA") == 0)
+        {
+            printf("Got STA\n");
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
             {
-                char *end;
-                unsigned short val = strtol(third, &end, 10);
-                printf("%i", val);
-                writeOutShort(val, out, &counter);
+                printf("Must be a label\n");
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
             }
-            else
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
             {
-                writeOutShort(0, out, &counter);
+                printf("Error: Invalid STA operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
             }
-        }
-        else if (strcmp(first, "INP") == 0 || strcmp(second, "INP"))
-        {
-        }
-        else if (strcmp(first, "STA") == 0 || stcmp(second, "STA"))
-        {
+            printf("Target: %i, %i =? %i\n", label_instruction_location, operand, end);
         }
 
-        // fputs(line, out);
+        counter++;
     }
 
     // const int BUFFER_SIZE = 1024;
