@@ -43,12 +43,12 @@ void write_out_short(short val, FILE *out, int *counter)
 
 int lookup_label(long *labelTable, int label_count, long labelHash)
 {
-    printf("Searching for %ld\n", labelHash);
+    // printf("Searching for %ld\n", labelHash);
     for (int i = 0; i < label_count; i += 2)
     {
         long currentHash = labelTable[i];
         long currentLoc = labelTable[i + 1];
-        printf("Got %ld at %ld\n", currentHash, currentLoc);
+        // printf("Got %ld at %ld\n", currentHash, currentLoc);
         if (currentHash == labelHash)
         {
             return currentLoc;
@@ -148,9 +148,15 @@ int main(int argc, char **argv)
             *second = 0; // set null byte at first index of string
         }
 
+        if (first[0] == '#')
+        {
+            printf("Skipping comment\n"); // notably counter isnt incremented
+            continue;
+        }
+
         // printf("Label Pass: Number: %i, First: %s, Second: %s\n", number, first, second);
 
-        if (is_instruction(second))
+        if (is_instruction(second) && !(first[0] == '#'))
         {
             printf("Found label %s at %i (instruction %s %s)\n", first, counter, second, third);
             labels[label_count++] = hash(first);
@@ -184,6 +190,12 @@ int main(int argc, char **argv)
 
         printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
 
+        if (first[0] == '#')
+        {
+            printf("Skipping comment\n");
+            continue;
+        }
+
         char *opcode = first;
         char *operand = second;
         if (is_instruction(second))
@@ -197,7 +209,7 @@ int main(int argc, char **argv)
             if (*operand)
             {
                 char *end;
-                unsigned short val = strtol(second, &end, 10);
+                unsigned short val = strtol(operand, &end, 10);
                 write_out_short(val, out, &counter);
             }
             else
@@ -207,15 +219,22 @@ int main(int argc, char **argv)
         }
         else if (strcmp(opcode, "INP") == 0)
         {
+            write_out_short(901, out, counter);
+        }
+        else if (strcmp(opcode, "OUT") == 0)
+        {
+            write_out_short(902, out, counter);
+        }
+        else if (strcmp(opcode, "HLT") == 0)
+        {
+            write_out_short(000, out, counter);
         }
         else if (strcmp(opcode, "STA") == 0)
         {
-            printf("Got STA\n");
             char *end;
             long label_instruction_location = strtol(operand, &end, 10);
             if (operand == end) // If there was no number
             {
-                printf("Must be a label\n");
                 // it must be a label
                 label_instruction_location = lookup_label(labels, label_count, hash(operand));
             }
@@ -225,10 +244,166 @@ int main(int argc, char **argv)
                 printf("Error: Invalid STA operand, '%s' is not a label or mailbox literal\n", operand);
                 exit(EXIT_FAILURE);
             }
-            printf("Target: %i, %i =? %i\n", label_instruction_location, operand, end);
-        }
 
-        counter++;
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid STA operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 300 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "LDA") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid LDA operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid LDA operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 500 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "ADD") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid ADD operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid ADD operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 100 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "SUB") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid SUB operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid SUB operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 200 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "BRZ") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid BRZ operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid BRZ operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 700 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "BRP") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid BRP operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid BRP operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 800 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
+        else if (strcmp(opcode, "BRA") == 0)
+        {
+            char *end;
+            long label_instruction_location = strtol(operand, &end, 10);
+            if (operand == end) // If there was no number
+            {
+                // it must be a label
+                label_instruction_location = lookup_label(labels, label_count, hash(operand));
+            }
+            // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+            if (label_instruction_location == -1)
+            {
+                printf("Error: Invalid BRA operand, '%s' is not a label or mailbox literal\n", operand);
+                exit(EXIT_FAILURE);
+            }
+
+            if (label_instruction_location < 0 || label_instruction_location > 99)
+            {
+                printf("Error: Invalid BRA operand, '%ld' is not in the range [0, 99]", label_instruction_location);
+                exit(EXIT_FAILURE);
+            }
+
+            short value = 600 + label_instruction_location;
+            write_out_short(value, out, &counter);
+        }
     }
 
     // const int BUFFER_SIZE = 1024;
