@@ -128,8 +128,7 @@ int main(int argc, char **argv)
     char line[MAX_LINE_LENGTH];
     int counter = 0;
 
-    printf("Label scan:\n");
-
+    printf("Labels ");
     // Find all variable locations
     while (fgets(line, sizeof(line), in))
     {
@@ -150,7 +149,7 @@ int main(int argc, char **argv)
 
         if (first[0] == '#')
         {
-            printf("Skipping comment\n"); // notably counter isnt incremented
+            // printf("Skipping comment\n"); // notably counter isnt incremented
             continue;
         }
 
@@ -158,7 +157,7 @@ int main(int argc, char **argv)
 
         if (is_instruction(second) && !(first[0] == '#'))
         {
-            printf("Found label %s at %i (instruction %s %s)\n", first, counter, second, third);
+            printf("%s:%i, ", first, counter);
             labels[label_count++] = hash(first);
             labels[label_count++] = (long)counter;
         }
@@ -166,10 +165,11 @@ int main(int argc, char **argv)
         counter++;
     }
 
+    printf("\n");
     fseek(in, 0, SEEK_SET);
     counter = 0;
 
-    printf("Output scan:\n");
+    printf("Labels found, writing final output\n");
 
     while (fgets(line, sizeof(line), in))
     {
@@ -188,11 +188,11 @@ int main(int argc, char **argv)
             *second = 0; // set null byte at first index of string
         }
 
-        printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
+        // printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
 
         if (first[0] == '#')
         {
-            printf("Skipping comment\n");
+            // printf("Skipping comment\n");
             continue;
         }
 
@@ -219,15 +219,15 @@ int main(int argc, char **argv)
         }
         else if (strcmp(opcode, "INP") == 0)
         {
-            write_out_short(901, out, counter);
+            write_out_short(901, out, &counter);
         }
         else if (strcmp(opcode, "OUT") == 0)
         {
-            write_out_short(902, out, counter);
+            write_out_short(902, out, &counter);
         }
         else if (strcmp(opcode, "HLT") == 0)
         {
-            write_out_short(000, out, counter);
+            write_out_short(000, out, &counter);
         }
         else if (strcmp(opcode, "STA") == 0)
         {
@@ -405,28 +405,6 @@ int main(int argc, char **argv)
             write_out_short(value, out, &counter);
         }
     }
-
-    // const int BUFFER_SIZE = 1024;
-    // char buffer[BUFFER_SIZE];
-    // if (!fgets(buffer, sizeof(buffer), in))
-    // {
-    //     printf("Error reading file\n");
-    //     return 1;
-    // }
-
-    // printf("%s\n", buffer);
-
-    // char *currentlyAt = buffer;
-
-    // while ((buffer + BUFFER_SIZE) - currentlyAt > 1)
-    // {
-    //     char line[1024];
-    //     int amountRead;
-
-    //     sscanf(currentlyAt, "%[^\n]%n", line, &amountRead);
-    //     printf("Line %i: %s\n", amountRead, buffer);
-    //     currentlyAt += amountRead;
-    // }
 
     printf("\n\n");
 
