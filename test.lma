@@ -1,12 +1,17 @@
-START INP
-STA FIRST
 INP
-STA SECOND
-LDA FIRST
-SUB SECOND
-# SUB ONE
+STA first
+INP
+STA second
+loop
+
+LDA first
+SUB one
+STA first
+BRP loop
 OUT
-HLT
-FIRST DAT
-SECOND DAT
-ONE DAT 1
+end HLT
+first DAT
+second DAT
+result DAT
+count DAT
+one DAT 1

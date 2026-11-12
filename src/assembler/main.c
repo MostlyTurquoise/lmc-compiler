@@ -209,7 +209,24 @@ int main(int argc, char **argv)
             if (*operand)
             {
                 char *end;
-                unsigned short val = strtol(operand, &end, 10);
+                long val = strtol(operand, &end, 10);
+                if (operand == end) // If there was no number
+                {
+                    // it must be a label
+                    val = lookup_label(labels, label_count, hash(operand));
+                }
+                // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
+                if (val == -1)
+                {
+                    printf("Error: Invalid DAT operand, '%s' is not a label or mailbox literal\n", operand);
+                    exit(EXIT_FAILURE);
+                }
+
+                if (val < 0 || val > 99)
+                {
+                    printf("Error: Invalid DAT operand, '%ld' is not in the range [0, 99]", val);
+                    exit(EXIT_FAILURE);
+                }
                 write_out_short(val, out, &counter);
             }
             else
