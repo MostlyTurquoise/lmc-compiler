@@ -124,7 +124,6 @@ int main(int argc, char **argv)
         {
             printf("Input: ");
             long input = -1;
-            char input_string[10];
             while (input == -1)
             {
                 scanf("%lu", &input);

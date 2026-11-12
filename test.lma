@@ -2,16 +2,9 @@ INP
 STA first
 INP
 STA second
-loop
-
 LDA first
-SUB one
-STA first
-BRP loop
+SUB second
 OUT
-end HLT
+HLT
 first DAT
 second DAT
-result DAT
-count DAT
-one DAT 1
