@@ -4,7 +4,10 @@ bin/lmca: src/assembler/*
 bin/lmcx: src/runtime/*
 	gcc src/runtime/main.c -o bin/lmcx
 
-build: bin/lmca bin/lmcx
+bin/lmcderef: src/dereferencer/*
+	gcc src/dereferencer/main.c -o bin/lmcderef
+
+build: bin/lmca bin/lmcx bin/lmcderef
 
 clean:
 	rm -R bin/*

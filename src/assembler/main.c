@@ -93,7 +93,7 @@ int main(int argc, char **argv)
     for (int i = 2; i < argc; i++)
     {
         char *flag = argv[i];
-        if (strcmp(flag, "-t"))
+        if (strcmp(flag, "-t") == 0)
         {
             assembly_mode = MODE_TEXT;
         }
@@ -146,8 +146,12 @@ int main(int argc, char **argv)
         {
             *second = 0; // set null byte at first index of string
         }
+        if (number < 1)
+        {
+            *first = 0; // set null byte at first index of string
+        }
 
-        if (first[0] == '#')
+        if ((first[0] == '#') || (*first == 0))
         {
             // printf("Skipping comment\n"); // notably counter isnt incremented
             continue;
@@ -187,10 +191,12 @@ int main(int argc, char **argv)
         {
             *second = 0; // set null byte at first index of string
         }
+        if (number < 1)
+        {
+            *first = 0; // set null byte at first index of string
+        }
 
-        // printf("Number: %i, First: %s, Second: %s, Third: %s\n", number, first, second, third);
-
-        if (first[0] == '#')
+        if ((first[0] == '#') || (*first == 0))
         {
             // printf("Skipping comment\n");
             continue;
@@ -218,13 +224,13 @@ int main(int argc, char **argv)
                 // label_instruction_location is now either a valid number, or 0 if it couldnt be parsed
                 if (val == -1)
                 {
-                    printf("Error: Invalid DAT operand, '%s' is not a label or mailbox literal\n", operand);
+                    printf("Error: Invalid DAT operand, '%s' is not a label or number literal\n", operand);
                     exit(EXIT_FAILURE);
                 }
 
-                if (val < 0 || val > 99)
+                if (val < 0 || val > 999)
                 {
-                    printf("Error: Invalid DAT operand, '%ld' is not in the range [0, 99]", val);
+                    printf("Error: Invalid DAT operand, '%ld' is not in the range [0, 999]", val);
                     exit(EXIT_FAILURE);
                 }
                 write_out_short(val, out, &counter);
