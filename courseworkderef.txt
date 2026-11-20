@@ -1,0 +1,67 @@
+	BR	main
+
+# func divide(current, divisor) -> count, current
+# current: value to be divided
+# divisor: value to divide by
+# returns: quotient in count, remainder in current
+# current was moved from here
+# divisor was moved from here
+# count was moved from here
+# sum was moved from here
+divide	LDA	count
+	ADD	ONE
+	STO	count
+	LDA	current
+	SUB	divisor
+	STO	current
+	BRP	divide
+	ADD	divisor
+	STO	current
+	LDA	count
+	SUB	ONE
+	STO	count
+# START P_BR
+	LDA	return_to
+	ADD	BR_NUM
+	STO	__lat16
+__lat16	DAT
+# END P_BR
+
+# Input data
+main	IN	
+	STO	A
+	IN	
+	STO	B
+	STO	current
+	LDA	HUNDRED
+	STO	divisor
+# &divided was declared for this
+	LDA	__p_divided
+	STO	return_to
+	BR	divide
+divided	LDA	count
+	OUT	
+	LDA	current
+	OUT	
+
+# Halt
+	HLT	
+# function helpers
+return_to	DAT	
+
+# globals
+A	DAT	
+B	DAT	
+
+# consts
+ONE	DAT	1
+TEN	DAT	10
+HUNDRED	DAT	100
+# Deref-generated constants
+BR_NUM	DAT	600
+# Delayed DATs
+current	DAT	0
+divisor	DAT	0
+count	DAT	0
+sum	DAT	0
+__p_divided	DAT	27

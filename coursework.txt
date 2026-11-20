@@ -1,0 +1,53 @@
+BR	main
+
+# func divide(current, divisor) -> count, current
+# current: value to be divided
+# divisor: value to divide by
+# returns: quotient in count, remainder in current
+current	DDAT	0
+divisor	DDAT	0
+count	DDAT	0
+sum	DDAT	0
+divide	LDA	count
+	ADD	ONE
+	STO	count
+	LDA	current
+	SUB	divisor
+	STO	current
+	BRP	divide
+	ADD	divisor
+	STO	current
+	LDA	count
+	SUB	ONE
+	STO	count
+	P_BR	return_to
+
+# Input data
+main	IN
+	STO	A
+	IN
+	STO	B
+	STO	current
+	LDA	HUNDRED
+	STO	divisor
+	LDA	&divided
+	STO	return_to
+	BR	divide
+divided	LDA	count
+	OUT
+	LDA	current
+	OUT
+
+# Halt
+	HLT
+# function helpers
+return_to	DAT
+
+# globals
+A	DAT
+B	DAT
+
+# consts
+ONE	DAT	1
+TEN	DAT	10
+HUNDRED	DAT	100

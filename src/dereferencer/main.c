@@ -58,7 +58,7 @@ int lookup_label(long *labelTable, int label_count, long labelHash)
 }
 
 // char *ALL_INSTRUCTIONS[] = {"DAT", "LDA", "STA", "ADD", "SUB", "INP", "OUT", "HLT", "BRA", "BRZ", "BRP", 0};
-char *ALL_INSTRUCTIONS[] = {"DAT", "LDA", "STO", "ADD", "SUB", "IN", "OUT", "HLT", "BR", "BRZ", "BRP", "P_BR", 0};
+char *ALL_INSTRUCTIONS[] = {"DAT", "LDA", "STO", "ADD", "SUB", "IN", "OUT", "HLT", "BR", "BRZ", "BRP", "P_BR", "DDAT", 0};
 
 int is_instruction(char *word)
 {
@@ -173,6 +173,9 @@ int main(int argc, char **argv)
         {
             counter += 4;
         }
+        else if ((strcmp(first, "DDAT") == 0) || (strcmp(second, "DDAT") == 0))
+        {
+        }
         else
         {
             counter++;
@@ -182,6 +185,9 @@ int main(int argc, char **argv)
     printf("\n");
     fseek(in, 0, SEEK_SET);
     counter = 0;
+
+    char variables[100][100] = {};
+    int no_of_variables = 0;
 
     printf("Labels found, writing final output\n");
 
@@ -258,22 +264,49 @@ int main(int argc, char **argv)
                 counter++;
             }
         }
+        else if (strcmp(opcode, "DDAT") == 0)
+        {
+            fprintf(out, "# %s was moved from here\n", label);
+            char varline[100];
+            snprintf(varline, 100, "%s\tDAT\t%s\n", label, operand);
+            strcpy(variables[no_of_variables++], varline);
+        }
         else if (strcmp(opcode, "P_BR") == 0)
         {
             fprintf(out, "# START P_BR\n");
             fprintf(out, "%s\tLDA\t%s\n", label, operand);
-            fprintf(out, "\tADD\t600\n");
+            fprintf(out, "\tADD\tBR_NUM\n");
             counter += 2;
-            fprintf(out, "\tSTO\t%i\n", counter + 1);
-            fprintf(out, "\tDAT\n");
+            fprintf(out, "\tSTO\t__lat%i\n", counter + 1);
+            fprintf(out, "__lat%i\tDAT\n", counter + 1);
             counter += 2;
             fprintf(out, "# END P_BR\n");
         }
         else
         {
-            fprintf(out, "%s\t%s\t%s\n", label, opcode, operand);
+            if (operand[0] == '&')
+            {
+                fprintf(out, "# %s was declared for this\n", operand);
+                long operand_label_location = lookup_label(labels, label_count, hash(operand + 1));
+                char varline[100];
+                snprintf(varline, 100, "__p_%s\tDAT\t%li\n", operand + 1, operand_label_location);
+                strcpy(variables[no_of_variables++], varline);
+                fprintf(out, "%s\t%s\t__p_%s\n", label, opcode, operand + 1);
+            }
+            else
+            {
+                fprintf(out, "%s\t%s\t%s\n", label, opcode, operand);
+            }
             counter++;
         }
+    }
+    fprintf(out, "# Deref-generated constants\n");
+    fprintf(out, "BR_NUM\tDAT\t600\n");
+
+    fprintf(out, "# Delayed DATs\n");
+    for (int i = 0; i < no_of_variables; i++)
+    {
+        fprintf(out, "%s", variables[i]);
     }
 
     printf("\n\n");
